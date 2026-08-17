@@ -154,6 +154,10 @@ DRESULT disk_ioctl (
   case 0:
     switch (cmd) {
     case CTRL_SYNC:
+      if (blkGetDriverState(&FATFS_HAL_DEVICE) != BLK_READY)
+        return RES_NOTRDY;
+      if (blkSync(&FATFS_HAL_DEVICE) != HAL_SUCCESS)
+        return RES_ERROR;
       return RES_OK;
     case GET_SECTOR_COUNT:
       if (blkGetInfo(&FATFS_HAL_DEVICE, &bdi)) {

@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006-2026 Giovanni Di Sirio.
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -60,6 +60,22 @@
 #endif
 
 /**
+ * @brief   Timeout while waiting for a read data token.
+ * @note    Time is in milliseconds.
+ */
+#if !defined(MMC_READ_TIMEOUT_MS) || defined(__DOXYGEN__)
+#define MMC_READ_TIMEOUT_MS             MMC_IDLE_TIMEOUT_MS
+#endif
+
+/**
+ * @brief   Timeout while waiting for the card to finish a write.
+ * @note    Time is in milliseconds.
+ */
+#if !defined(MMC_WRITE_TIMEOUT_MS) || defined(__DOXYGEN__)
+#define MMC_WRITE_TIMEOUT_MS            MMC_IDLE_TIMEOUT_MS
+#endif
+
+/**
  * @brief   Mutual exclusion on the SPI bus.
  */
 #if !defined(MMC_USE_MUTUAL_EXCLUSION) || defined(__DOXYGEN__)
@@ -108,6 +124,25 @@ typedef struct {
 typedef mmc_spi_config_t MMCConfig;
 
 /**
+ * @brief   MMC/SD connection failure stage.
+ * @note    This is diagnostic information only. The driver still reports
+ *          connection success or failure through @p mmcConnect().
+ */
+typedef enum {
+  MMC_CONNECT_ERROR_NONE = 0,
+  MMC_CONNECT_ERROR_CMD0,
+  MMC_CONNECT_ERROR_CMD8,
+  MMC_CONNECT_ERROR_CMD8_ECHO,
+  MMC_CONNECT_ERROR_ACMD41,
+  MMC_CONNECT_ERROR_CMD1,
+  MMC_CONNECT_ERROR_CMD58,
+  MMC_CONNECT_ERROR_CMD16,
+  MMC_CONNECT_ERROR_CSD,
+  MMC_CONNECT_ERROR_CAPACITY,
+  MMC_CONNECT_ERROR_CID
+} mmc_connect_error_t;
+
+/**
  * @brief   @p MMCDriver specific methods.
  */
 #define __mmc_driver_methods                                                \
@@ -145,6 +180,14 @@ typedef struct {
    * @brief   Pointer to an un-cacheable buffer of size @p MMC_BUFFER_SIZE.
    */
   uint8_t                               *buffer;
+  /**
+   * @brief   Stage of the most recent connection failure.
+   */
+  mmc_connect_error_t                   connect_error;
+  /**
+   * @brief   Last R1 response seen during the connection attempt.
+   */
+  uint8_t                               connect_error_r1;
 } mmc_spi_driver_t;
 
 /**
@@ -164,9 +207,9 @@ typedef mmc_spi_driver_t MMCDriver;
 /**
  * @brief   Returns the card insertion status.
  * @note    This macro wraps a low level function named
- *          @p mmc_lld_is_card_inserted(), this function must be
+ *          @p sdc_lld_is_card_inserted(), this function must be
  *          provided by the application because it is not part of the
- *          MMC_SPI driver.
+ *          SDC driver.
  *
  * @param[in] mmcp      pointer to the @p MMCDriver object
  * @return              The card state.
@@ -181,9 +224,9 @@ typedef mmc_spi_driver_t MMCDriver;
  * @brief   Returns the write protect status.
  *
  * @param[in] mmcp      pointer to the @p MMCDriver object
- * @return              The write protect status.
- * @retval false        card not write protected.
- * @retval true         card write protected.
+ * @return              The card state.
+ * @retval false        card not inserted.
+ * @retval true         card inserted.
  *
  * @api
  */
